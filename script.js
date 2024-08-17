@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const EVENTS_DELAY = 20000;
-    const MAX_KEYS_PER_GAME_PER_DAY = 5;
+    const MAX_KEYS_PER_GAME_PER_DAY = 10;
 
     const games = {
         1: {
@@ -22,6 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
             name: 'Train Miner',
             appToken: '82647f43-3f87-402d-88dd-09a90025313f',
             promoId: 'c4480ac7-e178-4973-8061-9ed5b2e17954',
+        },
+        5: {
+            name: 'MergeAway',
+            appToken: '8d1cc2ad-e097-4b86-90ef-7a27e19fb833',
+            promoId: 'dc128d28-c45b-411c-98ff-ac7726fbaea4',
+        },
+        6: {
+    name: 'Twerk Race 3D',
+    appToken: '61308365-9d16-4040-8bb0-2f4a4c69074c',
+    promoId: '61308365-9d16-4040-8bb0-2f4a4c69074c'
         }
     };
 
@@ -38,10 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const generatedKeysTitle = document.getElementById('generatedKeysTitle');
     const gameSelect = document.getElementById('gameSelect');
     const copyStatus = document.getElementById('copyStatus');
-    const telegramChannelBtn = document.getElementById('telegramChannelBtn');
-
     const previousKeysContainer = document.getElementById('previousKeysContainer');
     const previousKeysList = document.getElementById('previousKeysList');
+    const telegramChannelBtn = document.getElementById('telegramChannelBtn');
 
     const initializeLocalStorage = () => {
         const now = new Date().toISOString().split('T')[0];
@@ -142,27 +151,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const game = games[gameChoice];
 
         const storageKey = `keys_generated_${game.name}`;
-        const storedData = JSON.parse(localStorage.getItem(storageKey)) || { keys: [], count: 0 };
-
+        const storedData = JSON.parse(localStorage.getItem(storageKey));
 
         if (storedData.count + keyCount > MAX_KEYS_PER_GAME_PER_DAY) {
-            alert(`You can generate only ${MAX_KEYS_PER_GAME_PER_DAY - storedData.count} more keys for ${game.name} today. Please contact us on Telegram for more keys. Now Select Ok to See previouly generated Keys`);
-            if (storedData.keys.length + keyCount > MAX_KEYS_PER_GAME_PER_DAY) {
-                previousKeysList.innerHTML = storedData.keys.map(key =>
-                    `<div class="key-item">
-                        <input type="text" value="${key}" readonly>
-                    </div>`
-                ).join('');
-                previousKeysContainer.classList.remove('hidden');
-                return;
-            }
+            alert(`You can generate only ${MAX_KEYS_PER_GAME_PER_DAY - storedData.count} more keys for ${game.name} today.`);
+            previousKeysList.innerHTML = storedData.keys.map(key =>
+                `<div class="key-item">
+                    <input type="text" value="${key}" readonly>
+                </div>`
+            ).join('');
+            previousKeysContainer.classList.remove('hidden');
+            return;
         }
 
         keyCountLabel.innerText = `Number of keys: ${keyCount}`;
 
         progressBar.style.width = '0%';
         progressText.innerText = '0%';
-        progressLog.innerText = 'Starting... \n Please Wait it may take upto 1 min to initiate the process';
+        progressLog.innerText = 'Starting... \n Please wait It may take upto 1 min to Login';
         progressContainer.classList.remove('hidden');
         keyContainer.classList.add('hidden');
         generatedKeysTitle.classList.add('hidden');
@@ -213,10 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const keys = await Promise.all(Array.from({ length: keyCount }, generateKeyProcess));
 
-        storedData.count += keys.length;
-        storedData.keys.push(...keys.filter(key => key));
-        localStorage.setItem(storageKey, JSON.stringify(storedData));
-
         if (keys.length > 1) {
             keysList.innerHTML = keys.filter(key => key).map(key =>
                 `<div class="key-item">
@@ -233,66 +235,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
         }
 
+        storedData.count += keys.filter(key => key).length;
+        storedData.keys.push(...keys.filter(key => key));
+        localStorage.setItem(storageKey, JSON.stringify(storedData));
+
         keyContainer.classList.remove('hidden');
         generatedKeysTitle.classList.remove('hidden');
         document.querySelectorAll('.copyKeyBtn').forEach(button => {
             button.addEventListener('click', (event) => {
                 const key = event.target.getAttribute('data-key');
                 navigator.clipboard.writeText(key).then(() => {
-                    copyStatus.classList.remove('hidden');
-                    setTimeout(() => copyStatus.classList.add('hidden'), 2000);
+                    copyStatus.innerText = `Copied ${key}`;
+                    setTimeout(() => {
+                        copyStatus.innerText = '';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Could not copy text: ', err);
                 });
             });
         });
 
-        copyAllBtn.addEventListener('click', () => {
-            const keysText = keys.filter(key => key).join('\n');
-            navigator.clipboard.writeText(keysText).then(() => {
-                copyStatus.classList.remove('hidden');
-                setTimeout(() => copyStatus.classList.add('hidden'), 2000);
-            });
-        });
-
-        // Store the generated keys in localStorage
-        const storedKeys = JSON.parse(localStorage.getItem(`generated_keys_${game.name}`)) || [];
-        storedKeys.push(...keys.filter(key => key));
-        localStorage.setItem(`generated_keys_${game.name}`, JSON.stringify(storedKeys));
-
-        // Update the generated key count in localStorage
-        storedData.count += keyCount;
-        localStorage.setItem(storageKey, JSON.stringify(storedData));
-
-        progressBar.style.width = '100%';
-        progressText.innerText = '100%';
-        progressLog.innerText = 'Complete';
-
-        startBtn.classList.remove('hidden');
+        startBtn.disabled = false;
         keyCountSelect.classList.remove('hidden');
         gameSelect.classList.remove('hidden');
-        startBtn.disabled = false;
+        startBtn.classList.remove('hidden');
     });
 
-    document.getElementById('generateMoreBtn').addEventListener('click', () => {
-        const gameChoice = parseInt(gameSelect.value);
-        const game = games[gameChoice];
-
-        const storedKeys = JSON.parse(localStorage.getItem(`generated_keys_${game.name}`)) || [];
-
-        // Check if the user has reached the limit
-        if (storedKeys.length >= MAX_KEYS_PER_GAME_PER_DAY) {
-            alert(`You have already generated ${MAX_KEYS_PER_GAME_PER_DAY} keys for ${game.name} today. These are your keys: \n\n${storedKeys.join('\n')}`);
-            return;
-        }
-
-        progressContainer.classList.add('hidden');
-        keyContainer.classList.add('hidden');
-        startBtn.classList.remove('hidden');
-        keyCountSelect.classList.remove('hidden');
-        gameSelect.classList.remove('hidden');
-        generatedKeysTitle.classList.add('hidden');
-        copyAllBtn.classList.add('hidden');
-        keysList.innerHTML = '';
-        keyCountLabel.innerText = 'Number of keys:';
+    copyAllBtn.addEventListener('click', () => {
+        const allKeys = Array.from(document.querySelectorAll('.key-item input')).map(input => input.value).join('\n');
+        navigator.clipboard.writeText(allKeys).then(() => {
+            copyStatus.innerText = 'All keys copied';
+            setTimeout(() => {
+                copyStatus.innerText = '';
+            }, 2000);
+        }).catch(err => {
+            console.error('Could not copy text: ', err);
+        });
     });
 
     document.getElementById('creatorChannelBtn').addEventListener('click', () => {
